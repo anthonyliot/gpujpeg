@@ -1,6 +1,7 @@
+
 /**
  * @file
- * Copyright (c) 2011, CESNET z.s.p.o
+ * Copyright (c) 2011-2023, CESNET z.s.p.o
  * Copyright (c) 2011, Silicon Genome, LLC.
  *
  * All rights reserved.
@@ -27,48 +28,46 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+ 
+#ifndef GPUJPEG_HUFFMAN_ENCODER_H
+#define GPUJPEG_HUFFMAN_ENCODER_H
 
-#ifndef GPUJPEG_HUFFMAN_GPU_ENCODER_H
-#define GPUJPEG_HUFFMAN_GPU_ENCODER_H
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
-#include "gpujpeg_encoder_internal.h"
+#define WARPS_NUM 8
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define SERIALIZATION_THREADS_PER_TBLOCK 192
 
-struct gpujpeg_huffman_gpu_encoder;
-
-/**
- * Destroy huffman GPU encoder.
- *
- * @param table_huffman  pointer to initialized huffman tables in CPU memory
- * @return 0 if succeeds, otherwise nonzero
- */
-struct gpujpeg_huffman_gpu_encoder *
-gpujpeg_huffman_gpu_encoder_create(const struct gpujpeg_encoder * encoder);
+/** Natural order in constant memory */
+__constant__ int gpujpeg_huffman_encoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
 
 /**
- * Destroy huffman GPU encoder.
- *
- * @param huffman_gpu_encoder
+ * Huffman coding tables in constant memory - each has 257 items (256 + 1 extra)
+ * There are are 4 of them - one after another, in following order:
+ *    - luminance (Y) AC
+ *    - luminance (Y) DC
+ *    - chroma (cb/cr) AC
+ *    - chroma (cb/cr) DC
  */
-void
-gpujpeg_huffman_gpu_encoder_destroy(struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder);
+__device__ uint32_t gpujpeg_huffman_lut[(256 + 1) * 4];
 
 /**
- * Perform huffman encoding
- *
- * @param encoder              Encoder structure
- * @param encoder_gpu_encoder
- * @param output_byte_count    pointer to place in main system memory, where size of output buffer part, which contains all output data, should be saved
- * @return 0 if succeeds, otherwise nonzero
+ * Value decomposition in constant memory (input range from -4096 to 4095  ... both inclusive)
+ * Mapping from coefficient value into the code for the value ind its bit size.
  */
-int
-gpujpeg_huffman_gpu_encoder_encode(struct gpujpeg_encoder* encoder, struct gpujpeg_huffman_gpu_encoder * huffman_gpu_encoder, unsigned int * output_byte_count);
+__device__ unsigned int gpujpeg_huffman_value_decomposition[8 * 1024];
 
-#ifdef __cplusplus
-}
-#endif
+/** Allocate huffman tables in constant memory */
+__device__ struct gpujpeg_table_huffman_encoder gpujpeg_huffman_encoder_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
 
-#endif // GPUJPEG_HUFFMAN_GPU_ENCODER_H
+struct gpujpeg_huffman_encoder
+{
+    /** Size of occupied part of output buffer */
+    unsigned int * d_gpujpeg_huffman_output_byte_count;
+};
+
+#endif // GPUJPEG_HUFFMAN_ENCODER_H

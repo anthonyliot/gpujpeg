@@ -100,7 +100,7 @@ gpujpeg_table_quantization_apply_quality(uint8_t* table_raw, int quality)
 
 /* Documented at declaration */
 int
-gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
+gpujpeg_table_quantization_encoder_init(struct gpujpeg_accel* accel, struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
 {
     // Load raw table in zig-zag order
     gpujpeg_table_quantization_set_default(table->table_raw, type);
@@ -119,10 +119,7 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
         h_quantization_table[x * 8 + y] = 1.0 / (table->table_raw[i] * dct_scales[x] * dct_scales[y] * 8); // 8 is the gain of 2D DCT
     }
     
-    // Copy quantization table to constant memory
-    if ( cudaSuccess != cudaMemcpy(table->d_table_forward, h_quantization_table, 64 * sizeof(float), cudaMemcpyHostToDevice) )
-        return  -1;
-    gpujpeg_cuda_check_error("Copy DCT quantization table to device memory", return -1);
+    accel->memorycpy( (void*)table->d_table_forward, (void*)h_quantization_table, 64 * sizeof(uint16_t), 1 /*HostToDevice*/);
 
     // DCT loads the table into GPU memory itself, after premultiplying coefficients with DCT normalization constants.
     return 0;
@@ -130,7 +127,7 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
 
 /* Documented at declaration */
 int
-gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
+gpujpeg_table_quantization_decoder_init(struct gpujpeg_accel* accel, struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality)
 {
     // Load raw table in zig-zag order
     gpujpeg_table_quantization_set_default(table->table_raw, type);
@@ -143,25 +140,21 @@ gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table
         table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
     }
 
-    // Copy tables to device memory
-    if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
-        return -1;
-        
+    accel->memorycpy( (void*)table->d_table, (void*)table->table, 64 * sizeof(uint16_t), 1 /*HostToDevice*/);
+
     return 0;
 }
 
 int
-gpujpeg_table_quantization_decoder_compute(struct gpujpeg_table_quantization* table)
+gpujpeg_table_quantization_decoder_compute(struct gpujpeg_accel* accel, struct gpujpeg_table_quantization* table)
 {
     // Load inverse table from raw table
     for ( int i = 0; i < 64; i++ ) {
         table->table[gpujpeg_order_natural[i]] = table->table_raw[i];
     }
 
-    // Copy tables to device memory
-    if ( cudaSuccess != cudaMemcpy(table->d_table, table->table, 64 * sizeof(uint16_t), cudaMemcpyHostToDevice) )
-        return -1;
-        
+    accel->memorycpy((void*)table->d_table, (void*)table->table, 64 * sizeof(uint16_t), 1 /*HostToDevice*/);
+
     return 0;
 }
 

@@ -49,8 +49,8 @@ print_help(void)
     printf("gpujpeg [options] input.rgb output.jpg [input2.rgb output2.jpg ...]\n"
            "   -h, --help             print help\n"
            "   -v, --verbose          verbose output (multiply to increase verbosity - max 3) \n"
-           "   -D, --device           set cuda device id (default 0)\n"
-           "   -L, --device-list      list cuda devices\n"
+           "   -D, --device           set device info (default 'cpu' - support 'opencl:0/opencl:1/cuda:0/cuda:1')\n"
+           "   -L, --device-list      list all devices for the specified device\n"
            "\n");
     printf("   -s, --size             set input image size in pixels, e.g. 1920x1080\n"
            "   -f, --pixel-format     set input/output image pixel format, one of the\n"
@@ -237,13 +237,14 @@ main(int argc, char *argv[])
     gpujpeg_image_set_default_parameters(&param_image_original);
 
     // Other parameters
-    int device_id = 0;
+    char* device_id = NULL; // Default CPU 
     _Bool encode = 0;
     _Bool decode = 0;
     _Bool convert = 0;
     _Bool component_range = 0;
     int iterate = 1;
     _Bool use_opengl = 0;
+    int printinfo = 0;
 
     // Flags
     _Bool restart_interval_default = 1;
@@ -364,7 +365,8 @@ main(int argc, char *argv[])
             }
             break;
         case 'L':
-            return gpujpeg_print_devices_info() < 0 ? 1 : 0;
+            printinfo = 1;
+            break;
         case 'i':
             if ( optarg == NULL || strcmp(optarg, "true") == 0 || atoi(optarg) )
                 param.interleaved = 1;
@@ -378,7 +380,7 @@ main(int argc, char *argv[])
             decode = 1;
             break;
         case 'D':
-            device_id = atoi(optarg);
+            device_id = optarg;
             break;
         case 'C':
             convert = 1;
@@ -409,11 +411,25 @@ main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
 
+    struct gpujpeg_device device;
+
+    if (printinfo && device_id == NULL)
+        return gpujpeg_device_print_info(NULL) < 0 ? 1 : 0;
+    else if (printinfo)
+    {
+        gpujpeg_device_create_with_type(&device, device_id);
+        return gpujpeg_device_print_info(&device) < 0 ? 1 : 0;
+    } else {
+        if (device_id == NULL) device_id = "cpu";
+        gpujpeg_device_create_with_type(&device, device_id);
+    }
+    
+
     // Show info about image samples range
     if ( component_range == 1 ) {
         // For each image
         for ( int index = 0; index < argc; index++ ) {
-            gpujpeg_image_range_info(argv[index], param_image.width, param_image.height, param_image.pixel_format);
+            gpujpeg_image_range_info(&device, argv[index], param_image.width, param_image.height, param_image.pixel_format);
         }
         return 0;
     }
@@ -435,7 +451,8 @@ main(int argc, char *argv[])
             return -1;
         }
     }
-    if ( gpujpeg_init_device(device_id, flags) != 0 )
+
+    if ( gpujpeg_init_device(&device, flags) != 0 )
         return -1;
 
     // Convert
@@ -446,7 +463,7 @@ main(int argc, char *argv[])
             const char* input = argv[index];
             const char* output = argv[index + 1];
             // Perform conversion
-            gpujpeg_image_convert(input, output, param_image_original, param_image);
+            gpujpeg_image_convert(&device, input, output, param_image_original, param_image);
         }
         return 0;
     }
@@ -482,7 +499,7 @@ main(int argc, char *argv[])
         }
 
         // Create encoder
-        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(NULL);
+        struct gpujpeg_encoder* encoder = gpujpeg_encoder_create(&device, NULL);
         if ( encoder == NULL ) {
             fprintf(stderr, "Failed to create encoder!\n");
             return -1;
@@ -525,7 +542,7 @@ main(int argc, char *argv[])
             // Load image
             size_t image_size = gpujpeg_image_calculate_size(&param_image);
             uint8_t* image = NULL;
-            if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
+            if ( gpujpeg_image_load_from_file(&device, input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 ret = EXIT_FAILURE; continue;
             }
@@ -579,13 +596,13 @@ main(int argc, char *argv[])
                     }
                     printf(" -Preprocessing:     %10.4f ms\n", stats.duration_preprocessor);
                     printf(" -DCT & Quantization:%10.4f ms\n", stats.duration_dct_quantization);
-                    printf(" -Huffman Encoder:   %10.4f ms\n", stats.duration_huffman_coder);
+                    printf(" -Huffman Encoder:    %10.4f ms\n", stats.duration_huffman_coder);
                     printf(" -Copy From Device:  %10.4f ms\n", stats.duration_memory_from);
                     printf(" -Stream Formatter:  %10.4f ms\n", stats.duration_stream);
                 }
-                printf("Encode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
-                printf("Encode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from);
-                printf("Encode Image:        %10.4f ms\n", duration * 1000.0);
+                printf("Encode Image Device:  %10.4f ms (only in-device '%s' processing)\n", stats.duration_in_gpu, device._device);
+                printf("Encode Image Bare:    %10.4f ms (without copy to/from '%s' memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from, device._device);
+                printf("Encode Image:         %10.4f ms\n", duration * 1000.0);
             }
             if ( iterate > 1 ) {
                 printf("\n");
@@ -606,10 +623,10 @@ main(int argc, char *argv[])
 
             duration = gpujpeg_get_time() - duration;
             printf("Save Image:          %10.4f ms\n", duration * 1000.0);
-            printf("Compressed Size:     %10.zu bytes [%s]\n", image_compressed_size, output);
+            printf("Compressed Size:   %10.zu bytes [%s]\n", image_compressed_size, output);
 
             // Destroy image
-            gpujpeg_image_destroy(image);
+            gpujpeg_image_destroy(&device, image);
         }
 
         // Destroy OpenGL texture
@@ -636,7 +653,8 @@ main(int argc, char *argv[])
         }
 
         // Create decoder
-        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(NULL);
+        // TODO: AL Work on 
+        struct gpujpeg_decoder* decoder = gpujpeg_decoder_create(&device, NULL);
         if ( decoder == NULL ) {
             fprintf(stderr, "Failed to create decoder!\n");
             return -1;
@@ -699,7 +717,7 @@ main(int argc, char *argv[])
             // Load image
             size_t image_size = 0;
             uint8_t* image = NULL;
-            if ( gpujpeg_image_load_from_file(input, &image, &image_size) != 0 ) {
+            if ( gpujpeg_image_load_from_file(&device, input, &image, &image_size) != 0 ) {
                 fprintf(stderr, "Failed to load image [%s]!\n", argv[index]);
                 ret = EXIT_FAILURE; continue;
             }
@@ -754,15 +772,15 @@ main(int argc, char *argv[])
                         printf(" -OpenGL Memory Unmap:%9.4f ms\n", stats.duration_memory_unmap);
                     }
                 }
-                printf("Decode Image GPU:    %10.4f ms (only in-GPU processing)\n", stats.duration_in_gpu);
-                printf("Decode Image Bare:   %10.4f ms (without copy to/from GPU memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from);
+                printf("Decode Image Device: %10.4f ms (only in-device '%s' processing)\n", stats.duration_in_gpu, device._device);
+                printf("Decode Image Bare:   %10.4f ms (without copy to/from '%s' memory)\n", duration * 1000.0 - stats.duration_memory_to - stats.duration_memory_from, device._device);
                 printf("Decode Image:        %10.4f ms\n", duration * 1000.0);
             }
             if ( iterate > 1 ) {
                 printf("\n");
-                printf("Avg Decode Duration: %10.4f ms\n", duration_all_iterations * 1000.0 / iterate);
+                printf("Avg Decode Duration:  %10.4f ms\n", duration_all_iterations * 1000.0 / iterate);
                 if ( param.verbose >= 1 ) {
-                    printf("Avg w/o 1st Iter:    %10.4f ms\n", (duration_all_iterations - duration_first_iteration) * 1000.0 / (iterate - 1));
+                    printf("Avg w/o 1st Iter:     %10.4f ms\n", (duration_all_iterations - duration_first_iteration) * 1000.0 / (iterate - 1));
                 }
                 printf("\n");
             }
@@ -787,7 +805,7 @@ main(int argc, char *argv[])
             }
 
             duration = gpujpeg_get_time() - duration;
-            printf("Save Image:          %10.2f ms\n", duration * 1000.0);
+            printf("Save Image:        %10.2f ms\n", duration * 1000.0);
             printf("Decompressed Size:   %10.zu bytes [%s]\n", decoder_output.data_size, output);
 
             if ( use_opengl ) {
@@ -795,7 +813,7 @@ main(int argc, char *argv[])
             }
 
             // Destroy image
-            gpujpeg_image_destroy(image);
+            gpujpeg_image_destroy(&device, image);
         }
 
         // Destroy OpenGL texture

@@ -1,8 +1,5 @@
-/**
- * @file
- * Copyright (c) 2011, CESNET z.s.p.o
- * Copyright (c) 2011, Silicon Genome, LLC.
- *
+/*
+ * Copyright (c) 2020, CESNET z.s.p.o
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,18 +25,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_DCT_CPU_H
-#define GPUJPEG_DCT_CPU_H
+#ifndef GPUJPEG_ACCEL_CL_H
+#define GPUJPEG_ACCEL_CL_H
 
-#include "gpujpeg_encoder_internal.h"
-#include "gpujpeg_decoder_internal.h"
+#include "../gpujpeg_accel.h"
+struct gpujpeg_accel_opencl {
+    struct gpujpeg_accel base;
+};
 
-/**
- * Peform inverse DCT on CPU
- *
- * @param decoder
- */
-void
-gpujpeg_idct_cpu(struct gpujpeg_decoder* decoder);
+struct gpujpeg_accel* gpujpeg_accel_opencl_create(const struct gpujpeg_device* device);
 
-#endif // GPUJPEG_DCT_CPU_H
+#endif // GPUJPEG_ACCEL_CL_H

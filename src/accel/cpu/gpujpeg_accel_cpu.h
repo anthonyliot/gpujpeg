@@ -1,8 +1,5 @@
-/**
- * @file
- * Copyright (c) 2011, CESNET z.s.p.o
- * Copyright (c) 2011, Silicon Genome, LLC.
- *
+/*
+ * Copyright (c) 2020, CESNET z.s.p.o
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,34 +25,24 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_DCT_GPU_H
-#define GPUJPEG_DCT_GPU_H
 
-#include "gpujpeg_encoder_internal.h"
-#include "gpujpeg_decoder_internal.h"
+#ifndef GPUJPEG_ACCEL_CPU_H
+#define GPUJPEG_ACCEL_CPU_H
+
+#include "../gpujpeg_accel.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 
-/**
- * Peform forward DCT on GPU in integers
- *
- * @param decoder
- */
-int
-gpujpeg_dct_gpu(struct gpujpeg_encoder* encoder);
+struct gpujpeg_accel_cpu {
+    struct gpujpeg_accel base;
+};
 
-/**
- * Peform inverse DCT on GPU in integers
- *
- * @param decoder
- */
-int
-gpujpeg_idct_gpu(struct gpujpeg_decoder* decoder);
+struct gpujpeg_accel* gpujpeg_accel_cpu_create(const struct gpujpeg_device* device);
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
 
-#endif // GPUJPEG_DCT_GPU_H
+#endif // GPUJPEG_ACCEL_CPU_H

@@ -32,10 +32,12 @@
 #define GPUJPEG_TABLE_H
 
 #include "../libgpujpeg/gpujpeg_type.h"
+#include "gpujpeg_common_internal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 #define GPUJPEG_ORDER_NATURAL_SIZE (64 + 16)
 
@@ -140,7 +142,7 @@ struct gpujpeg_table_huffman_decoder {
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality);
+gpujpeg_table_quantization_encoder_init(struct gpujpeg_accel* accel, struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality);
 
 /**
  * Init JPEG quantization table for decoder
@@ -151,7 +153,7 @@ gpujpeg_table_quantization_encoder_init(struct gpujpeg_table_quantization* table
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality);
+gpujpeg_table_quantization_decoder_init(struct gpujpeg_accel* accel, struct gpujpeg_table_quantization* table, enum gpujpeg_component_type type, int quality);
 
 /**
  * Compute JPEG quantization table for decoder
@@ -160,7 +162,7 @@ gpujpeg_table_quantization_decoder_init(struct gpujpeg_table_quantization* table
  * @return 0 if succeeds, otherwise nonzero
  */
 int
-gpujpeg_table_quantization_decoder_compute(struct gpujpeg_table_quantization* table);
+gpujpeg_table_quantization_decoder_compute(struct gpujpeg_accel* accel, struct gpujpeg_table_quantization* table);
 
 /**
  * Print JPEG quantization table

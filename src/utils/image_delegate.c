@@ -63,7 +63,8 @@ static int pam_probe_delegate(const char *filename, struct gpujpeg_image_paramet
             "currently supported!\n",
             filename, info.maxval);
         return GPUJPEG_ERROR;
-    }
+    }    
+
     param_image->width = info.width;
     param_image->height = info.height;
     switch (info.depth) {

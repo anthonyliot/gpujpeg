@@ -53,11 +53,11 @@ else
 fi
 
 # huffmann
-AC_ARG_ENABLE(huffman-gpu-const-tables, AS_HELP_STRING([--enable-huffman-gpu-const-tables],[enable Huffman GPU decoder tables in constant memory]) )
-if test x$enable_huffman_gpu_const_tables = xyes ; then
-	AC_DEFINE([HUFFMAN_GPU_CONST_TABLES], [1], [Build with huffmann coder tables in constant memory])
+AC_ARG_ENABLE(huffman-const-tables, AS_HELP_STRING([--enable-huffman-const-tables],[enable Huffman GPU decoder tables in constant memory]) )
+if test x$enable_huffman_const_tables = xyes ; then
+	AC_DEFINE([HUFFMAN_CONST_TABLES], [1], [Build with huffmann coder tables in constant memory])
 else
-        enable_huffman_gpu_const_tables=no
+        enable_huffman_const_tables=no
 fi
 
 # opengl
@@ -220,7 +220,7 @@ Configuration summary:
   Shared library .............. $enable_shared
   Static library .............. $enable_static
 
-  Huffman const tables ........ $enable_huffman_gpu_const_tables
+  Huffman const tables ........ $enable_huffman_const_tables
   OpenGL ...................... $opengl ($opengl_context)
   Host compiler ............... $with_cuda_host_compiler
   Cuda compiler ............... $CUDA_COMPILER
