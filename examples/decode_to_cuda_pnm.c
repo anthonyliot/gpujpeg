@@ -3,7 +3,6 @@
  * then copied back to RAM and written to a PNM file.
  */
 
-#include <cuda_runtime.h>
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_decoder.h>
 #include <stdbool.h>
@@ -39,7 +38,7 @@ struct decode_data {
         void *output_image;
 };
 
-static int decode(const char *input_filename, struct decode_data *d)
+static int decode(struct gpujpeg_device* device, const char *input_filename, struct decode_data *d)
 {
         if (cudaMalloc(&d->d_output_image, MAX_OUT_LEN) != cudaSuccess) {
             fprintf(stderr, "Cannot allocate output CUDA buffer: %s\n", cudaGetErrorString(cudaGetLastError()));
@@ -52,14 +51,14 @@ static int decode(const char *input_filename, struct decode_data *d)
         }
 
         // create decoder
-        if ((d->decoder = gpujpeg_decoder_create(0)) == NULL) {
+        if ((d->decoder = gpujpeg_decoder_create(device, 0)) == NULL) {
                 return 1;
         }
         gpujpeg_decoder_set_output_format(d->decoder, GPUJPEG_RGB, GPUJPEG_444_U8_P012);
 
         // load image
         size_t input_image_size = 0;
-        if (gpujpeg_image_load_from_file(input_filename, &d->input_image, &input_image_size) != 0) {
+        if (gpujpeg_image_load_from_file(device, input_filename, &d->input_image, &input_image_size) != 0) {
                 return 1;
         }
 

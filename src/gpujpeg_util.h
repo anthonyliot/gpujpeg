@@ -36,31 +36,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <cuda_runtime.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define GPUJPEG_CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
-    
-// CUDA check error
-#define gpujpeg_cuda_check_error(msg, action) \
-    { \
-        cudaError_t err = cudaGetLastError(); \
-        if( cudaSuccess != err) { \
-            fprintf(stderr, "[GPUJPEG] [Error] %s (line %i): %s: %s.\n", \
-                __FILE__, __LINE__, msg, cudaGetErrorString( err) ); \
-            action; \
-        } \
-    } \
 
-#define GPUJPEG_CHECK_EX(cmd, msg, action) do {\
-        cmd;\
-        gpujpeg_cuda_check_error(msg, action)\
-} while(0)
-#define GPUJPEG_CHECK(cmd, action) GPUJPEG_CHECK_EX(cmd, #cmd, action)
-    
 // Divide and round up
 #define gpujpeg_div_and_round_up(value, div) \
     ((((value) % (div)) != 0) ? ((value) / (div) + 1) : ((value) / (div)))

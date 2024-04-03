@@ -32,4 +32,8 @@ Windows
 
 **Note:** Windows antivirus sometimes tends to remove the zluda.exe
 executable when extracted the downloaded ZIP. This can be easilly spotted
+<<<<<<< HEAD
 when there are just the DLLs extracted.
+=======
+when there are just the DLLs extracted.
+>>>>>>> 0a64812 (- Fix the CPU / CUDA Decoder)

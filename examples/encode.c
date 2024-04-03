@@ -39,7 +39,7 @@ struct encode_data {
         uint8_t *input_image;
 };
 
-static int encode(const char *input_filename, struct encode_data *d)
+static int encode(struct gpujpeg_device* device, const char *input_filename, struct encode_data *d)
 {
         // set default encode parametrs, after calling, parameters can be tuned (eg. quality)
         struct gpujpeg_parameters param;
@@ -59,7 +59,7 @@ static int encode(const char *input_filename, struct encode_data *d)
 
         // load image and set it as the encoder input buffer
         size_t input_image_size = 0;
-        if (gpujpeg_image_load_from_file(input_filename, &d->input_image, &input_image_size) != 0) {
+        if (gpujpeg_image_load_from_file(device, input_filename, &d->input_image, &input_image_size) != 0) {
                 return 1;
         }
         struct gpujpeg_encoder_input encoder_input;

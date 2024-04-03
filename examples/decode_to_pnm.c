@@ -29,17 +29,17 @@ struct decode_data {
         uint8_t *input_image;
 };
 
-static int decode(const char *input_filename, struct decode_data *d)
+static int decode(struct gpujpeg_device* device, const char *input_filename, struct decode_data *d)
 {
         // create decoder
-        if ((d->decoder = gpujpeg_decoder_create(0)) == NULL) {
+        if ((d->decoder = gpujpeg_decoder_create(device, 0)) == NULL) {
                 return 1;
         }
         gpujpeg_decoder_set_output_format(d->decoder, GPUJPEG_RGB, GPUJPEG_444_U8_P012);
 
         // load image
         size_t input_image_size = 0;
-        if (gpujpeg_image_load_from_file(input_filename, &d->input_image, &input_image_size) != 0) {
+        if (gpujpeg_image_load_from_file(device, input_filename, &d->input_image, &input_image_size) != 0) {
                 return 1;
         }
 

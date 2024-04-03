@@ -97,6 +97,35 @@ gpujpeg_get_time(void);
 #define GPUJPEG_IDCT_BLOCK_Y 	8
 #define GPUJPEG_IDCT_BLOCK_Z 	2
 
+// ********************************
+// -- BEGIN CHANGE TONY
+// ********************************
+
+#define GPUJPEG_DEVICE_STR_CPU "cpu"
+#define GPUJPEG_DEVICE_STR_CUDA "cuda"
+#define GPUJPEG_DEVICE_STR_CUDA_0 "cuda:0"
+#define GPUJPEG_DEVICE_STR_CUDA_1 "cuda:1"
+#define GPUJPEG_DEVICE_STR_OPENCL "opencl"
+#define GPUJPEG_DEVICE_STR_OPENCL_0 "opencl:0"
+#define GPUJPEG_DEVICE_STR_OPENCL_1 "opencl:1"
+
+#define SEPARATOR ':'
+
+enum gpujpeg_device_type {
+    GPUJPEG_DEVICE_TYPE_UNKNOWN = 0,
+    GPUJPEG_DEVICE_TYPE_CPU,
+    GPUJPEG_DEVICE_TYPE_CUDA,
+    GPUJPEG_DEVICE_TYPE_OPENCL,
+};
+
+struct gpujpeg_device {
+    uint32_t _id;
+    enum gpujpeg_device_type _type;
+    char* _device;
+    char* _type_str;
+};
+
+
 /** Device info for one device */
 struct gpujpeg_device_info
 {
@@ -105,9 +134,9 @@ struct gpujpeg_device_info
     /// Device name
     char name[256];
     /// Compute capability major version
-    int cc_major;
+    int major;
     /// Compute capability minor version
-    int cc_minor;
+    int minor;
     /// Amount of global memory
     size_t global_memory;
     /// Amount of constant memory
@@ -129,33 +158,53 @@ struct gpujpeg_devices_info
     struct gpujpeg_device_info device[GPUJPEG_MAX_DEVICE_COUNT];
 };
 
-/**
- * Get information about available devices
- *
- * @return devices info
- */
-GPUJPEG_API struct gpujpeg_devices_info
-gpujpeg_get_devices_info(void);
+GPUJPEG_API void 
+gpujpeg_device_create(struct gpujpeg_device* device);
 
-/**
- * Print information about available devices
- *
- * @return 0  if success
- * @return -1 for error (eg. no devices were found)
- */
+GPUJPEG_API void 
+gpujpeg_device_create_with_type(struct gpujpeg_device* device, const char* type);
+
+GPUJPEG_API void 
+gpujpeg_device_create_with_type_and_index(struct gpujpeg_device* device, enum gpujpeg_device_type t, uint32_t i);
+
+GPUJPEG_API const char*
+gpujpeg_device_name(const struct gpujpeg_device* device);
+
+GPUJPEG_API enum gpujpeg_device_type 
+gpujpeg_device_type(const struct gpujpeg_device* device);
+
+GPUJPEG_API const char*
+gpujpeg_device_type_str(const struct gpujpeg_device* device);
+
+GPUJPEG_API const char* 
+gpujpeg_device_str(const struct gpujpeg_device* device);
+
+GPUJPEG_API uint32_t 
+gpujpeg_device_index(const struct gpujpeg_device* device);
+
+GPUJPEG_API int 
+gpujpeg_device_is_supported(const struct gpujpeg_device* device);
+
+GPUJPEG_API struct gpujpeg_devices_info
+gpujpeg_device_get_info(const struct gpujpeg_device* device);
+
 GPUJPEG_API int
-gpujpeg_print_devices_info(void);
+gpujpeg_device_print_info(const struct gpujpeg_device* device);
+
+// ********************************
+// -- END CHANGE TONY
+// ********************************
 
 /**
  * Init CUDA device
  *
- * @param device_id  CUDA device id (starting at 0)
+ * @param device struct gpujpeg_device could be cuda, opencl, cpu
  * @param flags  Flags, e.g. if device info should be printed out (GPUJPEG_VERBOSE) or
  *               enable OpenGL interoperability (GPUJPEG_OPENGL_INTEROPERABILITY)
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_init_device(int device_id, int flags);
+gpujpeg_init_device(const struct gpujpeg_device* device, int flags);
 
 /**
  * JPEG parameters. This structure should not be initialized only be hand,
@@ -360,7 +409,7 @@ gpujpeg_image_calculate_size(struct gpujpeg_image_parameters* param);
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_load_from_file(const char* filename, uint8_t** image, size_t* image_size);
+gpujpeg_image_load_from_file(struct gpujpeg_device* device, const char* filename, uint8_t** image, size_t* image_size);
 
 /**
  * Save RGB image to file
@@ -397,7 +446,7 @@ gpujpeg_image_get_properties(const char *filename, struct gpujpeg_image_paramete
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_destroy(uint8_t* image);
+gpujpeg_image_destroy(struct gpujpeg_device* device, uint8_t* image);
 
 /**
  * Print range info for image samples
@@ -408,7 +457,7 @@ gpujpeg_image_destroy(uint8_t* image);
  * @param sampling_factor
  */
 GPUJPEG_API void
-gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujpeg_pixel_format sampling_factor);
+gpujpeg_image_range_info(struct gpujpeg_device* device, const char* filename, int width, int height, enum gpujpeg_pixel_format sampling_factor);
 
 /**
  * Convert image
@@ -423,7 +472,7 @@ gpujpeg_image_range_info(const char* filename, int width, int height, enum gpujp
  * @return 0 if succeeds, otherwise nonzero
  */
 GPUJPEG_API int
-gpujpeg_image_convert(const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
+gpujpeg_image_convert(struct gpujpeg_device* device, const char* input, const char* output, struct gpujpeg_image_parameters param_image_from,
         struct gpujpeg_image_parameters param_image_to);
 
 struct gpujpeg_opengl_context;

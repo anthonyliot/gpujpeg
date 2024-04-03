@@ -1,8 +1,5 @@
-/**
- * @file
- * Copyright (c) 2011-2021, CESNET z.s.p.o
- * Copyright (c) 2011, Silicon Genome, LLC.
- *
+/*
+ * Copyright (c) 2020, CESNET z.s.p.o
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,38 +25,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_POSTPROCESSOR_H
-#define GPUJPEG_POSTPROCESSOR_H
 
+#ifndef GPUJPEG_ACCEL_H
+#define GPUJPEG_ACCEL_H
+
+#include "gpujpeg_encoder_internal.h"
 #include "gpujpeg_decoder_internal.h"
+#include "../../libgpujpeg/gpujpeg_common.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define NOT_YET_IMPLEMENTED fprintf(stderr, "[WARNING] ACCELERATE FUNCTION '%s' NOT YET IMPLEMENTED\n", __FUNCTION__);
 
-/**
- * Init preprocessor decoder
- *
- * @param encoder
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-gpujpeg_preprocessor_decoder_init(struct gpujpeg_coder* coder);
+struct gpujpeg_accel*
+gpujpeg_accel_get(const struct gpujpeg_device* device);
 
-/**
- * Preprocessor decode
- *
- * @param coder
- * @param stream
- * @retval  0 if succeeds
- * @retval -1 general error
- * @retval -2 JPEG with source subsampling cannot be decoded to specified planar pixel format
- */
-int
-gpujpeg_preprocessor_decode(struct gpujpeg_coder* coder, cudaStream_t stream);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // GPUJPEG_POSTPROCESSOR_H
+#endif // GPUJPEG_ACCEL_H

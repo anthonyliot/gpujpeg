@@ -4,4 +4,8 @@ IndentWidth: 4
 PointerAlignment: Left
 SpacesInParens: Custom
 SpacesInParensOptions:
+<<<<<<< HEAD
   InConditionalStatements: true
+=======
+  InConditionalStatements: true
+>>>>>>> 0a64812 (- Fix the CPU / CUDA Decoder)
