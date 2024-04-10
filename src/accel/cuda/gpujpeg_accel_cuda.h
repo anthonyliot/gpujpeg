@@ -1,8 +1,5 @@
-/**
- * @file
- * Copyright (c) 2011-2021, CESNET z.s.p.o
- * Copyright (c) 2011, Silicon Genome, LLC.
- *
+/*
+ * Copyright (c) 2020, CESNET z.s.p.o
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,39 +25,24 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GPUJPEG_PREPROCESSOR_H
-#define GPUJPEG_PREPROCESSOR_H
 
-#include "gpujpeg_encoder_internal.h"
+#ifndef GPUJPEG_ACCEL_CUDA_H
+#define GPUJPEG_ACCEL_CUDA_H
+
+#include "../gpujpeg_accel.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 
-/**
- * Init preprocessor encoder
- *
- * @param encoder
- * @return 0 if succeeds, otherwise nonzero
- */
-int
-gpujpeg_preprocessor_encoder_init(struct gpujpeg_coder* coder);
+struct gpujpeg_accel_cuda {
+    struct gpujpeg_accel base;
+};
 
-/**
- * Preprocessor encode
- *
- * @param encoder  Encoder structure
- * @param image  Image source data
- * @return 0 if succeeds, otherwise nonzero
- * @retval  0 if succeeds
- * @retval -1 general error
- * @retval -2 planar pixel format cannot be encoded with specified subsampling
- */
-int
-gpujpeg_preprocessor_encode(struct gpujpeg_encoder * encoder);
+struct gpujpeg_accel* gpujpeg_accel_cuda_create(const struct gpujpeg_device* device);
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
 
-#endif // GPUJPEG_PREPROCESSOR_H
+#endif // GPUJPEG_ACCEL_CUDA_H

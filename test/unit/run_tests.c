@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <cuda_runtime.h>
 #include <libgpujpeg/gpujpeg_common.h>
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include "../../src/gpujpeg_common_internal.h"
@@ -53,10 +52,15 @@ static void encode_gpu_mem_as_cpu() {
 
         uint8_t *image = NULL;
         size_t len = param_image.width * param_image.height * 3 / 2;
+#ifdef GPUJPEG_USE_CUDA
         if (cudaSuccess != cudaMalloc((void**) &image, len)) {
                 abort();
         }
         cudaMemset(image, 0, len);
+#else
+        // TODO: NEED TO BE IMPLEMENTED
+        abort();
+#endif
 
         struct gpujpeg_encoder_input encoder_input;
         gpujpeg_encoder_input_set_image(&encoder_input, image);
@@ -68,7 +72,11 @@ static void encode_gpu_mem_as_cpu() {
                 abort();
         }
 
+#ifdef GPUJPEG_USE_CUDA
         cudaFree(image);
+#else
+        abort();
+#endif        
         gpujpeg_encoder_destroy(encoder);
 }
 

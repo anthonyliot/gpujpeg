@@ -36,12 +36,25 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <unistd.h>
+#ifdef GPUJPEG_USE_CUDA
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <unistd.h>
+#else GPUJPEG_USE_OPENCL
+#ifdef __APPLE__
+#include <OpenCL/opencl.h>
+#else
+#include <CL/cl.h>
+#endif
+#endif
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#include <GLUT/glut.h>
+#else
 #include <GL/gl.h>
 #include <GL/glut.h>
 #include <GL/glx.h>
+#endif
 
 /**
  * Check CUDA error

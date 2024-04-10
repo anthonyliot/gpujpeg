@@ -44,3 +44,11 @@ test-driver
 Debug
 Release
 
+# VSCode
+.vscode/
+
+# XCode
+xcode/
+
+# OSX
+.DS_Store

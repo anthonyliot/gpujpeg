@@ -1,8 +1,13 @@
 #include <libgpujpeg/gpujpeg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "gpujpeg_reformat.h"
 #include <GL/glew.h>
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
 #include <GL/glut.h>
+#endif
 
 int g_texture_id;
 int g_width;
@@ -36,15 +41,17 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // Init CUDA device
-    int device_id = 0;
+    // Init CPU device
+    char* device_id = GPUJPEG_DEVICE_STR_CPU;
     int flags = GPUJPEG_OPENGL_INTEROPERABILITY;
-    if (gpujpeg_init_device(device_id, flags) != 0) {
-        return -1;
-    }
 
+    struct gpujpeg_device device;
+    gpujpeg_device_create_with_type(&device, device_id);
+    if ( gpujpeg_init_device(&device, flags) != 0 )
+        return -1;
+    
     // Create decoder
-    struct gpujpeg_decoder * decoder = gpujpeg_decoder_create(NULL);
+    struct gpujpeg_decoder * decoder = gpujpeg_decoder_create(&device, NULL);
     if (decoder == NULL) {
         fprintf(stderr, "Failed to create decoder!\n");
         return -1;
@@ -53,7 +60,7 @@ int main(int argc, char *argv[])
     // Load image from file
     size_t image_size = 0;
     uint8_t * image = NULL;
-    if (0 != gpujpeg_image_load_from_file(input_filename, &image, &image_size)) {
+    if (0 != gpujpeg_image_load_from_file(&device, input_filename, &image, &image_size)) {
         fprintf(stderr, "Failed to load image [%s]!\n", input_filename);
         return -1;
     }
@@ -65,7 +72,7 @@ int main(int argc, char *argv[])
     gpujpeg_reformat(image, image_size, &image, &image_size);
     duration = gpujpeg_get_time() - duration;
     printf("Rewritten JPEG stream in %0.2f ms (from %zd bytes to %zd bytes.\n", duration * 1000.0, image_old_size, image_size);
-    gpujpeg_image_destroy(image_old);
+    gpujpeg_image_destroy(&device, image_old);
 
     // Get image size and check number of color components
     struct gpujpeg_image_parameters param_image;
@@ -122,7 +129,7 @@ int main(int argc, char *argv[])
     // Get data from OpenGL texture
     uint8_t* data = NULL;
     size_t data_size = 0;
-    data = malloc(param_image.width * param_image.height * param_image.comp_count);
+    data = (uint8_t*)malloc(param_image.width * param_image.height * param_image.comp_count);
     gpujpeg_opengl_texture_get_data(texture->texture_id, data, &data_size);
 
     // Save image
@@ -135,7 +142,7 @@ int main(int argc, char *argv[])
     }
 
     // Clean up decoder
-    gpujpeg_image_destroy(image);
+    gpujpeg_image_destroy(&device, image);
     gpujpeg_decoder_destroy(decoder);
 
     // Show texture

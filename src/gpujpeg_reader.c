@@ -682,7 +682,7 @@ gpujpeg_reader_read_dqt(struct gpujpeg_decoder* decoder, uint8_t** image, const 
         }
 
         // Prepare quantization table for read raw table
-        gpujpeg_table_quantization_decoder_compute(table);
+        gpujpeg_table_quantization_decoder_compute(decoder->coder.accel, table);
     }
     return 0;
 }
@@ -870,9 +870,12 @@ gpujpeg_reader_read_dht(struct gpujpeg_decoder* decoder, uint8_t** image, const 
         // Compute huffman table for read values
         gpujpeg_table_huffman_decoder_compute(table);
 
-        // Copy table to device memory
-        cudaMemcpyAsync(d_table, table, sizeof(struct gpujpeg_table_huffman_decoder), cudaMemcpyHostToDevice, decoder->stream);
-        gpujpeg_cuda_check_error("Decoder copy huffman table ", return -1);
+        if (decoder->coder.accel == NULL) {
+            fprintf(stderr, "[GPUJPEG] [Error] Decoder does not have the accelerate initialize!\n");
+            return -1;
+        }
+        
+        decoder->coder.accel->memorycpy_async((void*)d_table, (void*)table, sizeof(struct gpujpeg_table_huffman_decoder), 1 /*HostToDevice*/, decoder->stream);
     }
     return 0;
 }

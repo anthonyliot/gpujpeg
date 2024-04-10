@@ -1,4 +1,3 @@
-#include <cuda_runtime.h>
 #include <libgpujpeg/gpujpeg_encoder.h>
 #include <stdio.h>
 #include <stdlib.h>

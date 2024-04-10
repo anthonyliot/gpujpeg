@@ -130,7 +130,7 @@ gpujpeg_decoder_output_set_custom_cuda(struct gpujpeg_decoder_output* output, ui
  * @return decoder structure if succeeds, otherwise NULL
  */
 GPUJPEG_API struct gpujpeg_decoder*
-gpujpeg_decoder_create(cudaStream_t stream);
+gpujpeg_decoder_create(const struct gpujpeg_device* device, void* stream);
 
 /**
  * Init JPEG decoder for specific image properties
