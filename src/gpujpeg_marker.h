@@ -177,7 +177,7 @@ gpujpeg_marker_name(enum gpujpeg_marker_code code)
         default:
         {
             static char buffer[255];
-            sprintf(buffer, "Unknown (0x%X)", code);
+            snprintf(buffer, strlen(buffer), "Unknown (0x%X)", code);
             return buffer;
         }
     }

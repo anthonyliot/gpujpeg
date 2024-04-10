@@ -305,91 +305,61 @@ gpujpeg_image_get_file_format(const char* filename)
     return GPUJPEG_IMAGE_FILE_UNKNOWN;
 }
 
-void gpujpeg_set_device(int index)
-{
-    fprintf(stderr, "[WARNING] FUNCTION gpujpeg_set_device NOT YET IMPLEMENTED\n");
+// void gpujpeg_set_device(int index)
+// {
+//     fprintf(stderr, "[WARNING] FUNCTION gpujpeg_set_device NOT YET IMPLEMENTED\n");
     
-//#ifdef GPUJPEG_USE_CUDA
-//    cudaSetDevice(index);
-//#else
-//    // TODO: NEED IMPLEMENTATION
-//    printf("[WARNING] gpujpeg_set_device(): NOT YET IMPLEMENTED\n");
-//#endif
-}
+// //#ifdef GPUJPEG_USE_CUDA
+// //    cudaSetDevice(index);
+// //#else
+// //    // TODO: NEED IMPLEMENTATION
+// //    printf("[WARNING] gpujpeg_set_device(): NOT YET IMPLEMENTED\n");
+// //#endif
+// }
 
 /* Documented at declaration */
 void
-gpujpeg_component_print8(struct gpujpeg_component* component, uint8_t* d_data)
+gpujpeg_component_print8(const struct gpujpeg_device* device, struct gpujpeg_component* component, uint8_t* d_data)
 {
     int data_size = component->data_width * component->data_height;
     uint8_t* data = NULL;
   
-    fprintf(stderr, "[WARNING] FUNCTION gpujpeg_component_print8 NOT YET IMPLEMENTED\n");
     
-//#ifdef GPUJPEG_USE_CUDA
-//    cudaMallocHost((void**)&data, data_size * sizeof(uint8_t));
-//    cudaMemcpy(data, d_data, data_size * sizeof(uint8_t), cudaMemcpyDeviceToHost);
-//
-//    printf("Print Data\n");
-//    for ( int y = 0; y < component->data_height; y++ ) {
-//        for ( int x = 0; x < component->data_width; x++ ) {
-//            printf("%3u ", data[y * component->data_width + x]);
-//        }
-//        printf("\n");
-//    }
-//    cudaFreeHost(data);
-//#else
-//    // TODO: NEED IMPLEMENTATION
-//    data = malloc(data_size * sizeof(uint8_t));
-//    memcpy(data, d_data, data_size * sizeof(uint8_t));
-//
-//    printf("Print Data\n");
-//    for ( int y = 0; y < component->data_height; y++ ) {
-//        for ( int x = 0; x < component->data_width; x++ ) {
-//            printf("%3u ", data[y * component->data_width + x]);
-//        }
-//        printf("\n");
-//    }
-//    free(data);
-//#endif
-    
+    struct gpujpeg_accel* accel = gpujpeg_accel_get(device);
+    data = accel->alloc_host(data_size * sizeof(uint8_t));
+    accel->memorycpy(data, d_data, data_size * sizeof(uint8_t), 2 /*DeviceToHost*/);
+   
+    printf("Print Data\n");
+    for ( int y = 0; y < component->data_height; y++ ) {
+        for ( int x = 0; x < component->data_width; x++ ) {
+            printf("%3u ", data[y * component->data_width + x]);
+        }
+        printf("\n");
+    }
+
+    accel->release_host(data);    
 }
 
 /* Documented at declaration */
 void
-gpujpeg_component_print16(struct gpujpeg_component* component, int16_t* d_data)
+gpujpeg_component_print16(const struct gpujpeg_device* device, struct gpujpeg_component* component, int16_t* d_data)
 {
     int data_size = component->data_width * component->data_height;
     int16_t* data = NULL;
     
-    fprintf(stderr, "[WARNING] FUNCTION gpujpeg_component_print16 NOT YET IMPLEMENTED\n");
-    
-//#ifdef GPUJPEG_USE_CUDA
-//    cudaMallocHost((void**)&data, data_size * sizeof(int16_t));
-//    cudaMemcpy(data, d_data, data_size * sizeof(int16_t), cudaMemcpyDeviceToHost);
-//
-//    printf("Print Data\n");
-//    for ( int y = 0; y < component->data_height; y++ ) {
-//        for ( int x = 0; x < component->data_width; x++ ) {
-//            printf("%3d ", data[y * component->data_width + x]);
-//        }
-//        printf("\n");
-//    }
-//    cudaFreeHost(data);
-//#else
-//    // TODO: NEED IMPLEMENTATION
-//    data = malloc(data_size * sizeof(int16_t));
-//    memcpy(data, d_data, data_size * sizeof(int16_t));
-//
-//    printf("Print Data\n");
-//    for ( int y = 0; y < component->data_height; y++ ) {
-//        for ( int x = 0; x < component->data_width; x++ ) {
-//            printf("%3d ", data[y * component->data_width + x]);
-//        }
-//        printf("\n");
-//    }
-//    free(data);
-//#endif
+    struct gpujpeg_accel* accel = gpujpeg_accel_get(device);
+    data = accel->alloc_host(data_size * sizeof(int16_t));
+    accel->memorycpy(data, d_data, data_size * sizeof(int16_t), 2 /*DeviceToHost*/);
+   
+    printf("Print Data\n");
+    for ( int y = 0; y < component->data_height; y++ ) {
+        for ( int x = 0; x < component->data_width; x++ ) {
+            printf("%3d ", data[y * component->data_width + x]);
+        }
+        printf("\n");
+    }
+
+    accel->release_host(data);
 }
 
 /* Documented at declaration */
@@ -1183,7 +1153,7 @@ gpujpeg_image_convert(struct gpujpeg_device* device, const char* input, const ch
         struct gpujpeg_image_parameters param_image_to)
 {
     fprintf(stderr, "[GPUJPEG] [Error] GPUJPEG conversions are currently defunct, report to developers if needed!\n");
-    (void) input, (void) output, (void) param_image_from, (void) param_image_to;
+    (void) device, (void) input, (void) output, (void) param_image_from, (void) param_image_to;
     return -1;
 #if 0
     assert(param_image_from.width == param_image_to.width);
@@ -1529,6 +1499,7 @@ gpujpeg_opengl_texture_register(int texture_id, enum gpujpeg_opengl_texture_type
 #else
     // TODO: NEED IMPLEMENTATION
     printf("[WARNING] gpujpeg_opengl_texture_register(): NOT YET IMPLEMENTED\n");
+    return NULL;
 #endif
 }
 

@@ -63,7 +63,7 @@ static enum gpujpeg_device_type device_type_from_string(const char* type) {
 void
 gpujpeg_device_create(struct gpujpeg_device* device) {
     device->_device = GPUJPEG_DEVICE_STR_CPU;
-    device->_type_str = device_names[GPUJPEG_DEVICE_TYPE_CPU];
+    device->_type_str = strdup(device_names[GPUJPEG_DEVICE_TYPE_CPU]); // TODO: Leak strdup
     device->_id = 0;
     device->_type = GPUJPEG_DEVICE_TYPE_CPU;
 }
@@ -82,7 +82,7 @@ gpujpeg_device_create_with_type(struct gpujpeg_device* device, const char* type)
     device->_device = strdup(type);
     device->_id = dev_index;
     device->_type = dev_type;
-    device->_type_str = device_names[dev_type];
+    device->_type_str = strdup(device_names[dev_type]); // TODO: Leak strdup
 }
 
 void 
@@ -94,7 +94,7 @@ gpujpeg_device_create_with_type_and_index(struct gpujpeg_device* device, enum gp
     }
     device->_id = i;
     device->_type = t;
-    device->_type_str = device_names[t];
+    device->_type_str = strdup(device_names[t]); // TODO: Leak strdup
     switch (t) {
         case GPUJPEG_DEVICE_TYPE_CPU:
             device->_device = strdup(GPUJPEG_DEVICE_STR_CPU);
@@ -240,7 +240,8 @@ gpujpeg_device_print_info(const struct gpujpeg_device* device)
             printf("  Multiprocessors: %d\n", device_info->multiprocessor_count);
         }
 
-        if (device->_id >= devices_info.device_count) {
+        // Cast to remove warning sign comparaison device_count should be always >= 0
+        if (device->_id >= (uint32_t)devices_info.device_count) {
             fprintf(stderr, "[GPUJPEG] [Error] Device index %d is out of range\n", device->_id);
             return -1;
         }

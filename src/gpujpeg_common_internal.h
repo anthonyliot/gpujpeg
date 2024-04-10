@@ -217,7 +217,7 @@ struct gpujpeg_component
  * @param d_data
  */
 void
-gpujpeg_component_print8(struct gpujpeg_component* component, uint8_t* d_data);
+gpujpeg_component_print8(const struct gpujpeg_device* device, struct gpujpeg_component* component, uint8_t* d_data);
 
 /**
  * Print component data
@@ -226,7 +226,7 @@ gpujpeg_component_print8(struct gpujpeg_component* component, uint8_t* d_data);
  * @param d_data
  */
 void
-gpujpeg_component_print16(struct gpujpeg_component* component, int16_t* d_data);
+gpujpeg_component_print16(const struct gpujpeg_device* device, struct gpujpeg_component* component, int16_t* d_data);
 
 /**
  * JPEG coder structure
