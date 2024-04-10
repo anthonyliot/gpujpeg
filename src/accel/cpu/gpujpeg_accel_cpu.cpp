@@ -472,13 +472,13 @@ struct gpujpeg_huffman_encoder * huffman_encoder = (struct gpujpeg_huffman_encod
     cpu::gpujpeg_huffman_add_packed_table(gpujpeg_huffman_cpu_lut + 257 * 3, &encoder->table_huffman[GPUJPEG_COMPONENT_CHROMINANCE][GPUJPEG_HUFFMAN_DC], false);
     
     // Copy data to CPU-side symbol
-    memcpy(gpujpeg_huffman_lut, gpujpeg_huffman_cpu_lut, (256 + 1) * 4 * sizeof(*gpujpeg_huffman_lut));
+    memcpy(cpu::gpujpeg_huffman_lut, gpujpeg_huffman_cpu_lut, (256 + 1) * 4 * sizeof(*cpu::gpujpeg_huffman_lut));
 
     // Copy Huffman coding table to GPU memory
-    memcpy(&gpujpeg_huffman_encoder_table_huffman, &encoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC], sizeof(gpujpeg_huffman_encoder_table_huffman));
+    memcpy(cpu::gpujpeg_huffman_encoder_table_huffman, &encoder->table_huffman[GPUJPEG_COMPONENT_LUMINANCE][GPUJPEG_HUFFMAN_DC], sizeof(cpu::gpujpeg_huffman_encoder_table_huffman));
 
     // Copy natural order to constant device memory
-    memcpy(&gpujpeg_huffman_encoder_order_natural, gpujpeg_order_natural, GPUJPEG_ORDER_NATURAL_SIZE * sizeof(int));
+    memcpy(cpu::gpujpeg_huffman_encoder_order_natural, gpujpeg_order_natural, GPUJPEG_ORDER_NATURAL_SIZE * sizeof(int));
 
     return huffman_encoder;
 }

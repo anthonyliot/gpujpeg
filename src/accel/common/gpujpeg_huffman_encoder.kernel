@@ -35,6 +35,32 @@
 
 #include "../../gpujpeg_marker.h"
 
+#define WARPS_NUM 8
+
+#define SERIALIZATION_THREADS_PER_TBLOCK 192
+
+/** Natural order in constant memory */
+__constant__ int gpujpeg_huffman_encoder_order_natural[GPUJPEG_ORDER_NATURAL_SIZE];
+
+/**
+ * Huffman coding tables in constant memory - each has 257 items (256 + 1 extra)
+ * There are are 4 of them - one after another, in following order:
+ *    - luminance (Y) AC
+ *    - luminance (Y) DC
+ *    - chroma (cb/cr) AC
+ *    - chroma (cb/cr) DC
+ */
+__device__ uint32_t gpujpeg_huffman_lut[(256 + 1) * 4];
+
+/**
+ * Value decomposition in constant memory (input range from -4096 to 4095  ... both inclusive)
+ * Mapping from coefficient value into the code for the value ind its bit size.
+ */
+__device__ unsigned int gpujpeg_huffman_value_decomposition[8 * 1024];
+
+/** Allocate huffman tables in constant memory */
+__device__ struct gpujpeg_table_huffman_encoder gpujpeg_huffman_encoder_table_huffman[GPUJPEG_COMPONENT_TYPE_COUNT][GPUJPEG_HUFFMAN_TYPE_COUNT];
+
 /**
  * Initializes coefficient decomposition table in global memory.  (CC >= 2.0)
  * Output table is a mapping from some value into its code and bit size.
