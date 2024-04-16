@@ -180,26 +180,6 @@ __global__ void
 gpujpeg_dct_kernel(int block_count_x, int block_count_y, uint8_t* source, const unsigned int source_stride,
                        int16_t* output, int output_stride, const float * const quant_table GRID_BLOCK)
 {
-    LOOP_KERNEL_BEGIN
-
-    // each warp processes 4 8x8 blocks (horizontally neighboring)
-    const int block_idx_x = threadIdx.x >> 3;
-    const int block_idx_y = threadIdx.y;
-
-    // offset of threadblocks's blocks in the image (along both axes)
-    const int block_offset_x = blockIdx.x * 4;
-    const int block_offset_y = blockIdx.y * WARP_COUNT;
-
-    // stop if thread's block is out of image
-    const bool processing = block_offset_x + block_idx_x < block_count_x
-                         && block_offset_y + block_idx_y < block_count_y;
-    if(!processing) {
-        return;
-    }
-
-    // index of row/column processed by this thread within its 8x8 block
-    const int dct_idx = threadIdx.x & 7;
-
     // data type of transformed coefficients
     typedef float dct_t;
 
@@ -217,81 +197,120 @@ gpujpeg_dct_kernel(int block_count_x, int block_count_y, uint8_t* source, const 
 
     // buffer for transpositions of all blocks
     __shared__ dct_t s_transposition_all[SHARED_SIZE_TOTAL];
+    
+    LOOP_KERNEL_BEGIN
 
-    // pointer to begin of transposition buffer for thread's block
-    dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
+    // each warp processes 4 8x8 blocks (horizontally neighboring)
+    const int block_idx_x = threadIdx.x >> 3;
+    const int block_idx_y = threadIdx.y;
 
-    // input coefficients pointer (each thread loads 1 column of 8 coefficients from its 8x8 block)
-    const int in_x = (block_offset_x + block_idx_x) * 8 + dct_idx;
-    const int in_y = (block_offset_y + block_idx_y) * 8;
-    const int in_offset = in_x + in_y * source_stride;
-    const uint8_t * in = source + in_offset;
+    // offset of threadblocks's blocks in the image (along both axes)
+    const int block_offset_x = blockIdx.x * 4;
+    const int block_offset_y = blockIdx.y * WARP_COUNT;
 
-    // load all 8 coefficients of thread's column, but do NOT apply level shift now - will be applied as part of DCT
-    dct_t src0 = *in;
-    in += source_stride;
-    dct_t src1 = *in;
-    in += source_stride;
-    dct_t src2 = *in;
-    in += source_stride;
-    dct_t src3 = *in;
-    in += source_stride;
-    dct_t src4 = *in;
-    in += source_stride;
-    dct_t src5 = *in;
-    in += source_stride;
-    dct_t src6 = *in;
-    in += source_stride;
-    dct_t src7 = *in;
+    // stop if thread's block is out of image
+    const bool processing = block_offset_x + block_idx_x < block_count_x
+                         && block_offset_y + block_idx_y < block_count_y;
+    if(processing) {
 
-    // destination pointer into shared transpose buffer (each thread saves one column)
-    dct_t * const s_dest = s_transposition + dct_idx;
+        // index of row/column processed by this thread within its 8x8 block
+        const int dct_idx = threadIdx.x & 7;
 
-    // transform the column (vertically) and save it into the transpose buffer
-    gpujpeg_dct(src0, src1, src2, src3, src4, src5, src6, src7,
-                    s_dest[SHARED_STRIDE * 0],
-                    s_dest[SHARED_STRIDE * 1],
-                    s_dest[SHARED_STRIDE * 2],
-                    s_dest[SHARED_STRIDE * 3],
-                    s_dest[SHARED_STRIDE * 4],
-                    s_dest[SHARED_STRIDE * 5],
-                    s_dest[SHARED_STRIDE * 6],
-                    s_dest[SHARED_STRIDE * 7],
-                    -1024.0f  // = 8 * -128 ... level shift sum for all 8 coefficients
-    );
+        // pointer to begin of transposition buffer for thread's block
+        dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
 
-    // read coefficients back - each thread reads one row (no need to sync - only threads within same warp work on each block)
-    // ... and transform the row horizontally
-    volatile dct_t * s_src = s_transposition + SHARED_STRIDE * dct_idx;
-    dct_t dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7;
-    gpujpeg_dct(s_src[0], s_src[1], s_src[2], s_src[3], s_src[4], s_src[5], s_src[6], s_src[7],
-                    dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
+        // input coefficients pointer (each thread loads 1 column of 8 coefficients from its 8x8 block)
+        const int in_x = (block_offset_x + block_idx_x) * 8 + dct_idx;
+        const int in_y = (block_offset_y + block_idx_y) * 8;
+        const int in_offset = in_x + in_y * source_stride;
+        const uint8_t * in = source + in_offset;
 
-    // apply quantization to the row of coefficients (quantization table is actually transposed in global memory for coalesced memory acceses)
-    #if __CUDA_ARCH__ < 200
-    const float * const quantization_row = gpujpeg_dct_quantization_table_const + dct_idx; // Quantization table in constant memory for CCs < 2.0
-    #else
-    const float * const quantization_row = quant_table + dct_idx; // Cached global memory reads for CCs >= 2.0
-    #endif
-    const int out0 = rintf(dct0 * quantization_row[0 * 8]);
-    const int out1 = rintf(dct1 * quantization_row[1 * 8]);
-    const int out2 = rintf(dct2 * quantization_row[2 * 8]);
-    const int out3 = rintf(dct3 * quantization_row[3 * 8]);
-    const int out4 = rintf(dct4 * quantization_row[4 * 8]);
-    const int out5 = rintf(dct5 * quantization_row[5 * 8]);
-    const int out6 = rintf(dct6 * quantization_row[6 * 8]);
-    const int out7 = rintf(dct7 * quantization_row[7 * 8]);
+        // load all 8 coefficients of thread's column, but do NOT apply level shift now - will be applied as part of DCT
+        dct_t src0 = *in;
+        in += source_stride;
+        dct_t src1 = *in;
+        in += source_stride;
+        dct_t src2 = *in;
+        in += source_stride;
+        dct_t src3 = *in;
+        in += source_stride;
+        dct_t src4 = *in;
+        in += source_stride;
+        dct_t src5 = *in;
+        in += source_stride;
+        dct_t src6 = *in;
+        in += source_stride;
+        dct_t src7 = *in;
 
-    // using single write, save output row packed into 16 bytes
-    const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
-    const int out_y = (block_offset_y + block_idx_y) * output_stride;
-    ((uint4*)(output + out_x + out_y))[dct_idx] = make_uint4(
-        (out0 & 0xFFFF) + (out1 << 16),
-        (out2 & 0xFFFF) + (out3 << 16),
-        (out4 & 0xFFFF) + (out5 << 16),  // ... & 0xFFFF keeps only lower 16 bits - useful for negative numbers, which have 1s in upper bits
-        (out6 & 0xFFFF) + (out7 << 16)
-    );
+        // destination pointer into shared transpose buffer (each thread saves one column)
+        dct_t * const s_dest = s_transposition + dct_idx;
 
+        // transform the column (vertically) and save it into the transpose buffer
+        gpujpeg_dct(src0, src1, src2, src3, src4, src5, src6, src7,
+                        s_dest[SHARED_STRIDE * 0],
+                        s_dest[SHARED_STRIDE * 1],
+                        s_dest[SHARED_STRIDE * 2],
+                        s_dest[SHARED_STRIDE * 3],
+                        s_dest[SHARED_STRIDE * 4],
+                        s_dest[SHARED_STRIDE * 5],
+                        s_dest[SHARED_STRIDE * 6],
+                        s_dest[SHARED_STRIDE * 7],
+                        -1024.0f  // = 8 * -128 ... level shift sum for all 8 coefficients
+        );
+    
+    EXTRA_BLOCK(
+        }
+    )
+    
+    __syncthreads()
+
+    EXTRA_BLOCK(
+        const int block_idx_x = threadIdx.x >> 3;
+        const int block_idx_y = threadIdx.y;
+        const int block_offset_x = blockIdx.x * 4;
+        const int block_offset_y = blockIdx.y * WARP_COUNT;
+        const bool processing = block_offset_x + block_idx_x < block_count_x && block_offset_y + block_idx_y < block_count_y;
+        if(processing) {
+            const int dct_idx = threadIdx.x & 7;
+            dct_t * const s_transposition = s_transposition_all + block_idx_y * SHARED_SIZE_WARP + block_idx_x * 8;
+    )
+
+        // read coefficients back - each thread reads one row (no need to sync - only threads within same warp work on each block)
+        // ... and transform the row horizontally
+        volatile dct_t * s_src = s_transposition + SHARED_STRIDE * dct_idx;
+        dct_t dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7;
+        gpujpeg_dct(s_src[0], s_src[1], s_src[2], s_src[3], s_src[4], s_src[5], s_src[6], s_src[7],
+                        dct0, dct1, dct2, dct3, dct4, dct5, dct6, dct7);
+
+        // apply quantization to the row of coefficients (quantization table is actually transposed in global memory for coalesced memory acceses)
+        // #if __CUDA_ARCH__ < 200
+        //   const float * const quantization_row = gpujpeg_dct_quantization_table_const + dct_idx; // Quantization table in constant memory for CCs < 2.0
+        // #else
+        const float * const quantization_row = quant_table + dct_idx; // Cached global memory reads for CCs >= 2.0
+        // #endif
+        const int out0 = rintf(dct0 * quantization_row[0 * 8]);
+        const int out1 = rintf(dct1 * quantization_row[1 * 8]);
+        const int out2 = rintf(dct2 * quantization_row[2 * 8]);
+        const int out3 = rintf(dct3 * quantization_row[3 * 8]);
+        const int out4 = rintf(dct4 * quantization_row[4 * 8]);
+        const int out5 = rintf(dct5 * quantization_row[5 * 8]);
+        const int out6 = rintf(dct6 * quantization_row[6 * 8]);
+        const int out7 = rintf(dct7 * quantization_row[7 * 8]);
+
+        // using single write, save output row packed into 16 bytes
+        const int out_x = (block_offset_x + block_idx_x) * 64; // 64 coefficients per one transformed and quantized block
+        const int out_y = (block_offset_y + block_idx_y) * output_stride;
+        ((uint4*)(output + out_x + out_y))[dct_idx] = make_uint4(
+            (out0 & 0xFFFF) + (out1 << 16),
+            (out2 & 0xFFFF) + (out3 << 16),
+            (out4 & 0xFFFF) + (out5 << 16),  // ... & 0xFFFF keeps only lower 16 bits - useful for negative numbers, which have 1s in upper bits
+            (out6 & 0xFFFF) + (out7 << 16)
+        );
+    
+    EXTRA_BLOCK(
+        }
+    )
+    
     LOOP_KERNEL_END
 }
 

@@ -29,10 +29,18 @@
 #define GPUJPEG_ACCEL_CL_H
 
 #include "../gpujpeg_accel.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 struct gpujpeg_accel_opencl {
     struct gpujpeg_accel base;
 };
 
 struct gpujpeg_accel* gpujpeg_accel_opencl_create(const struct gpujpeg_device* device);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #endif // GPUJPEG_ACCEL_CL_H

@@ -31,6 +31,7 @@
 #define GRID_BLOCK_NO_COMMA
 #define LOOP_KERNEL_BEGIN
 #define LOOP_KERNEL_END
+#define EXTRA_BLOCK(X)
 
 #include "gpujpeg_accel_cuda.h"
 #include "../../gpujpeg_util.h"
@@ -316,7 +317,7 @@ static int idct_cuda(struct gpujpeg_decoder* decoder) {
 static struct gpujpeg_huffman_decoder* huffman_decoder_init_cuda() {
     struct gpujpeg_huffman_decoder *huffman_decoder = (struct gpujpeg_huffman_decoder *) calloc(1, sizeof(struct gpujpeg_huffman_decoder));
 
-    #ifdef huffman_CONST_TABLES
+    #ifdef HUFFMAN_CONST_TABLES
         // Copy natural order to constant device memory
         CUDA_CHECK(cudaMemcpyToSymbol(
             gpujpeg_huffman_decoder_order_natural,

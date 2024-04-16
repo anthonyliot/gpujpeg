@@ -122,6 +122,7 @@ static uint4 make_uint4(uint32_t _x = 0, uint32_t _y = 0, uint32_t _z = 0, uint3
 
 #define GRID_BLOCK ,dim3 gridDim ,dim3 blockDim
 #define GRID_BLOCK_NO_COMMA dim3 gridDim ,dim3 blockDim
+#define EXTRA_BLOCK(X) X
 
 // We close all the for loop of the thread to ensure the sync
 #define __syncthreads()                                                                  \
@@ -133,6 +134,7 @@ static uint4 make_uint4(uint32_t _x = 0, uint32_t _y = 0, uint32_t _z = 0, uint3
                 for (int threadIdx_y = 0; threadIdx_y < blockDim.y; threadIdx_y++) {     \
                     for (int threadIdx_z = 0; threadIdx_z < blockDim.z; threadIdx_z++) { \
                         dim3 threadIdx(threadIdx_x, threadIdx_y, threadIdx_z);
+
 
 #define LOOP_KERNEL_BEGIN                                                                    \
     PRAGMA("omp parallel for collapse(3)")                                                   \
@@ -261,8 +263,6 @@ static int dct_cpu(struct gpujpeg_encoder* encoder) {
 // Get coder
     struct gpujpeg_coder* coder = &encoder->coder;
 
-    cudaStream_t stream = (encoder->stream)?*(cudaStream_t*)encoder->stream:NULL;
-
     // Encode each component
     for ( int comp = 0; comp < coder->param_image.comp_count; comp++ ) {
         // Get component
@@ -272,10 +272,11 @@ static int dct_cpu(struct gpujpeg_encoder* encoder) {
         enum gpujpeg_component_type type = encoder->coder.component[comp].type;
         const float* const d_quantization_table = encoder->table_quantization[type].d_table_forward;
 
+        // TODO:
         // copy the quantization table into constant memory for devices of CC < 2.0
-        if( encoder->coder.compute_major < 2 ) {
-            memcpy(cpu::gpujpeg_dct_quantization_table_const, d_quantization_table, sizeof(cpu::gpujpeg_dct_quantization_table_const));
-        }
+        //if( encoder->coder.compute_major < 2 ) {
+        //    memcpy(cpu::gpujpeg_dct_quantization_table_const, d_quantization_table, sizeof(cpu::gpujpeg_dct_quantization_table_const));
+        //}
 
         int roi_width = component->data_width;
         int roi_height = component->data_height;
